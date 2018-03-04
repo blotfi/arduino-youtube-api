@@ -16,25 +16,26 @@
    You should have received a copy of the GNU Lesser General Public
    License along with this library; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+   
+   updated by blotfi
  */
-
 
 #include "YoutubeApi.h"
 
 YoutubeApi::YoutubeApi(String apiKey, Client &client)	{
-	_apiKey = apiKey;
-	this->client = &client;
+  _apiKey = apiKey;
+  this->client = &client;
 }
-
+//-----------------------------------------------------
 String YoutubeApi::sendGetToYoutube(String command) {
 	String headers="";
-	String body="";
-	bool finishedHeaders = false;
-	bool currentLineIsBlank = true;
-	unsigned long now;
+  String body="";
+  bool finishedHeaders = false;
+  bool currentLineIsBlank = true;
+	long now;
 	bool avail;
 	// Connect with youtube api over ssl
-	if (client->connect(YTAPI_HOST, YTAPI_SSL_PORT)) {
+	if (client->connect(HOST, SSL_PORT)) {
 		// Serial.println(".... connected to server");
 		String a="";
 		char c;
@@ -42,34 +43,33 @@ String YoutubeApi::sendGetToYoutube(String command) {
 		client->println("GET "+command+"&key="+_apiKey);
 		now=millis();
 		avail=false;
-		while (millis() - now < YTAPI_TIMEOUT) {
+		while (millis()-now<1500) {
 			while (client->available()) {
-
-				// Allow body to be parsed before finishing
-				avail = finishedHeaders;
 				char c = client->read();
 				//Serial.write(c);
 
-				if(!finishedHeaders){
-					if (currentLineIsBlank && c == '\n') {
-						finishedHeaders = true;
-					}
-					else{
-						headers = headers + c;
+        if(!finishedHeaders){
+          if (currentLineIsBlank && c == '\n') {
+            finishedHeaders = true;
+          }
+          else{
+            headers = headers + c;
 
-					}
-				} else {
-					if (ch_count < maxMessageLength)  {
-						body=body+c;
-						ch_count++;
-					}
-				}
+          }
+        } else {
+          if (ch_count < maxMessageLength)  {
+            body=body+c;
+            ch_count++;
+  				}
+        }
 
-				if (c == '\n') {
-					currentLineIsBlank = true;
-				}else if (c != '\r') {
-					currentLineIsBlank = false;
-				}
+        if (c == '\n') {
+          currentLineIsBlank = true;
+        }else if (c != '\r') {
+          currentLineIsBlank = false;
+        }
+
+				avail=true;
 			}
 			if (avail) {
 				//Serial.println("Body:");
@@ -80,32 +80,61 @@ String YoutubeApi::sendGetToYoutube(String command) {
 		}
 	}
 
-	return body;
-}
+  //int lastCharIndex = body.lastIndexOf("}");
 
+	//return body.substring(0,lastCharIndex+1);
+  return body;
+}
+//-----------------------------------------------------
 bool YoutubeApi::getChannelStatistics(String channelId){
-	String command="https://" YTAPI_HOST "/youtube/v3/channels?part=statistics&id="+channelId; //If you can't find it(for example if you have a custom url) look here: https://www.youtube.com/account_advanced
-	//Serial.println(command);
-	String response = sendGetToYoutube(command);       //recieve reply from youtube
-	DynamicJsonBuffer jsonBuffer;
-	JsonObject& root = jsonBuffer.parseObject(response);
-	if(root.success()) {
-		if (root.containsKey("items")) {
-			long subscriberCount = root["items"][0]["statistics"]["subscriberCount"];
-			long viewCount = root["items"][0]["statistics"]["viewCount"];
-			long commentCount = root["items"][0]["statistics"]["commentCount"];
-			long hiddenSubscriberCount = root["items"][0]["statistics"]["hiddenSubscriberCount"];
-			long videoCount = root["items"][0]["statistics"]["videoCount"];
+  String command="https://www.googleapis.com/youtube/v3/channels?part=statistics&id="+channelId; //If you can't find it(for example if you have a custom url) look here: https://www.youtube.com/account_advanced
+  String response = sendGetToYoutube(command);       //recieve reply from youtube
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& root = jsonBuffer.parseObject(response);
+  if(root.success()) {
+    if (root.containsKey("items")) {
+      long subscriberCount = root["items"][0]["statistics"]["subscriberCount"];
+      long viewCount = root["items"][0]["statistics"]["viewCount"];
+      long commentCount = root["items"][0]["statistics"]["commentCount"];
+      long hiddenSubscriberCount = root["items"][0]["statistics"]["hiddenSubscriberCount"];
+      long videoCount = root["items"][0]["statistics"]["videoCount"];
 
-			channelStats.viewCount = viewCount;
-			channelStats.subscriberCount = subscriberCount;
-			channelStats.commentCount = commentCount;
-			channelStats.hiddenSubscriberCount = hiddenSubscriberCount;
-			channelStats.videoCount = videoCount;
+      channelStats.viewCount = viewCount;
+      channelStats.subscriberCount = subscriberCount;
+      channelStats.commentCount = commentCount;
+      channelStats.hiddenSubscriberCount = hiddenSubscriberCount;
+      channelStats.videoCount = videoCount;
 
-			return true;
-		}
-	}
+      return true;
+    }
+  }
 
-	return false;
+  return false;
 }
+//-----------------------------------------------------
+bool YoutubeApi::getVideoStatistics(String videoId){
+  String command="https://www.googleapis.com/youtube/v3/videos?part=statistics&id="+videoId;
+  String response = sendGetToYoutube(command);       //recieve reply from youtube
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& root = jsonBuffer.parseObject(response);
+  if(root.success()) {
+    if (root.containsKey("items")) {
+      long viewCount = root["items"][0]["statistics"]["viewCount"];
+      long likeCount = root["items"][0]["statistics"]["likeCount"];
+      long dislikeCount = root["items"][0]["statistics"]["dislikeCount"];
+      long favoriteCount = root["items"][0]["statistics"]["favoriteCount"];
+      long commentCount = root["items"][0]["statistics"]["commentCount"];
+
+      videoStats.viewCount = viewCount;
+      videoStats.likeCount = likeCount;
+      videoStats.dislikeCount = dislikeCount;
+      videoStats.favoriteCount = favoriteCount;
+      videoStats.commentCount = commentCount;
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
