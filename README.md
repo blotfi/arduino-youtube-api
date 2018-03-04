@@ -3,6 +3,10 @@ A wrapper for the [YouTube API](https://developers.google.com/youtube/v3/docs/) 
 
 Currently the only implemented method is getting the channel statistics but it can be easily extended. Please raise an issue if there is a method you are looking for.
 
+## updated by blotfi:
+Added
+    bool getVideoStatistics(String videoId);
+
 ![Imgur](http://i.imgur.com/FmXyW4E.png)
 
 ## Getting a Google Apps API key (Required!)
